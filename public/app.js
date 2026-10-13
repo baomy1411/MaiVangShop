@@ -42,7 +42,14 @@ function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
-const pic = p => p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">` : '<span aria-hidden="true">🌼</span>';
+const pic = p => p.image ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" decoding="async">` : '<span aria-hidden="true">🌼</span>';
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (img instanceof HTMLImageElement && img.closest('.pic')) {
+    img.closest('.pic').classList.add('no-image');
+    img.remove();
+  }
+}, true);
 const go = h => { location.hash = h; };
 
 // ===== Liên hệ / quên mật khẩu =====
@@ -104,7 +111,7 @@ function viewShop() {
     <section class="hero">
       <p class="hero-kicker">HÀ THANH TÂM · VƯỜN MAI VÀNG</p>
       <h1>Gìn giữ sắc mai, vun đầy ngày Tết</h1>
-      <p>Khám phá những chậu mai vàng và dáng mai bonsai mang nét đẹp truyền thống. Chọn cây yêu thích, chúng tôi sẽ hỗ trợ bạn tư vấn và đặt hàng.</p>
+      <p>Mai Vàng Hà Thanh Tâm – Trọn Vẹn Sắc Xuân, Mùa Tết Sum Vầy</p>
       <a class="btn gold" href="#shop">Khám phá vườn mai&nbsp; →</a>
     </section>
     <section class="benefits" aria-label="Cam kết cửa hàng">
@@ -388,3 +395,6 @@ window.addEventListener('hashchange', route);
   try { state.user = (await api('/api/auth/me')).user; state.cfg = await api('/api/config'); await loadProducts(); } catch (er) { toast(er.message); }
   renderNav(); route();
 })();
+
+const yearEl = document.getElementById('year');
+if (yearEl) yearEl.textContent = new Date().getFullYear();

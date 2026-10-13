@@ -216,7 +216,7 @@ main {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  margin: 0 0 3rem;
+  margin: 1rem 0 3rem;
 }
 .benefit {
   display: flex;
@@ -300,6 +300,10 @@ main {
 .btn.sm {
   padding: 0.3rem 0.7rem;
   font-size: 0.82rem;
+}
+.btn.sm:hover {
+  background-color: red;
+  color: var(--paper);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -682,9 +686,104 @@ hr {
 /* ===== Liên hệ ===== */
 .footer-note a,
 .panel p a {
-  color: inherit;
-  text-decoration: underline;
+  color: var(red);
+  text-decoration: none;
 }
 .contact-float span {
   white-space: nowrap;
 }
+
+
+/* ===== Responsive polish: mobile, tablet, laptop and wide screens ===== */
+img { max-width: 100%; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+body { min-width: 320px; overflow-wrap: anywhere; }
+main { width: 100%; }
+.hero {
+  min-height: clamp(360px, 43vw, 590px);
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 7vw, 6rem);
+  justify-content: center;
+  align-items: flex-start;
+  gap: .35rem;
+  background-position: center 80%;
+  background-color: #173d2b;
+}
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8,34,22,.88), rgba(8,34,22,.58) 55%, rgba(8,34,22,.12)); }
+.hero h1, .hero p, .hero .hero-kicker, .hero .btn { position: relative; }
+.hero h1 { max-width: 12ch; }
+.hero p:not(.hero-kicker) { max-width: 56ch; }
+.grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); align-items: stretch; }
+.card .pic { display: block; width: 100%; color: inherit; }
+.card .pic img { width: 100%; height: 100%; object-fit: cover; }
+.detail .pic img { object-fit: contain; }
+.panel, .card, .benefit, .detail > *, .row > * { min-width: 0; }
+.tbl { min-width: 640px; }
+.btn { min-height: 42px; }
+input, select, textarea { max-width: 100%; }
+#toast { width: max-content; max-width: calc(100vw - 2rem); text-align: center; }
+@media (min-width: 1200px) {
+  main { padding-left: clamp(2rem, 5vw, 5rem); padding-right: clamp(2rem, 5vw, 5rem); }
+  .hero { border-radius: 0 0 22px 22px; }
+}
+@media (max-width: 900px) {
+  .top { gap: .5rem; }
+  nav { gap: .2rem .35rem; }
+  nav a, nav button { font-size: .82rem; padding: .45rem .5rem; }
+  .benefits { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .benefit { align-items: flex-start; padding: .85rem; }
+  .detail { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; }
+}
+@media (max-width: 640px) {
+  html { scroll-padding-top: 12px; }
+  .announcement { font-size: .68rem; padding: .4rem .75rem; letter-spacing: 0; }
+  .top { position: sticky; top: 0; align-items: center; flex-direction: column; padding: .65rem 4vw .55rem; gap: .5rem; }
+  .brand { align-self: flex-start; min-width: 0; }
+  .brand-mark { flex: 0 0 40px; width: 40px; height: 40px; }
+  .brand-copy strong { font-size: .84rem; letter-spacing: .09em; }
+  .brand-copy small { font-size: .58rem; letter-spacing: .16em; }
+  nav { display: flex; width: 100%; flex-wrap: wrap; justify-content: flex-start; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding: 0 0 .15rem; }
+  nav a, nav button { flex: 0 0 auto; white-space: nowrap; font-size: .78rem; padding: .42rem .55rem; }
+  main { padding: 0 4vw 2.5rem; }
+  .hero { min-height: 390px; margin: 0 -4vw 1.3rem; padding: 2.5rem 6vw; background-position: 58% center; }
+  .hero h1 { font-size: clamp(2rem, 9vw, 3.1rem); max-width: 11ch; }
+  .hero p:not(.hero-kicker) { font-size: .92rem; width: 50%; margin: 0; }
+  .hero .btn.gold { margin-bottom: 0; }
+  .benefits { grid-template-columns: 1fr; gap: .6rem; margin-bottom: 2rem; }
+  .benefit { align-items: center; padding: .7rem .85rem; }
+  .section-head { margin-top: 1.5rem; gap: .35rem; }
+  .section-head h2 { font-size: 1.7rem; }
+  .bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+  .bar input, .bar select { width: 100%; min-width: 0; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+  .card { border-radius: 12px; }
+  .card .pic { aspect-ratio: 4 / 4.2; }
+  .card .info { padding: .7rem; gap: .35rem; }
+  .card h3 { font-size: .92rem; line-height: 1.35; }
+  .card .cat { font-size: .72rem; }
+  .price { font-size: 1rem; }
+  .card .btn { width: 100%; min-height: 40px; font-size: .76rem; padding: .45rem .35rem; }
+  .detail { grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
+  .detail .pic { aspect-ratio: 4 / 3; max-height: none; font-size: 4rem; }
+  .detail h1 { font-size: clamp(1.8rem, 8vw, 2.5rem); }
+  .detail .btn { margin: .2rem .2rem .2rem 0; }
+  .row { gap: .25rem; }
+  .row > * { flex: 1 1 100%; }
+  .panel { padding: 1rem; margin: .8rem 0; }
+  .narrow { margin: 1.2rem auto; }
+  .narrow h2 { font-size: 1.7rem; }
+  .tabs { flex-wrap: wrap; }
+  .tabs button { flex: 1 1 auto; }
+  .tbl th, .tbl td { padding: .6rem .5rem; font-size: .85rem; }
+  .foot { padding: 2rem 5vw 5rem; }
+  .foot .footer-note { line-height: 1.9; }
+  .contact-float { right: .7rem; bottom: .7rem; padding: .75rem; }
+}
+@media (max-width: 360px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .card .pic { aspect-ratio: 4 / 3; }
+  .brand-copy strong { font-size: .76rem; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.pic.no-image { background: linear-gradient(135deg, #f8f0d9, #e9efdf); display: grid; place-items: center; }
+.pic.no-image::after { content: "🌼"; font-size: clamp(2.5rem, 8vw, 5rem); }
