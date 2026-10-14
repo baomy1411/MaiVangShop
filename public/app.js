@@ -159,7 +159,7 @@ function viewProduct(id) {
   if (!p) return $('#app').innerHTML = '<p class="empty">Sản phẩm không tồn tại hoặc đã ngừng bán. <a href="#/">Về cửa hàng</a></p>';
   $('#app').innerHTML = `
     <div class="detail">
-      <div class="pic">${pic(p)}</div>
+      <div class="pic${p.image ? ' has-img' : ''}">${pic(p)}</div>
       <div>
         <span class="cat">${esc(p.category)}</span>
         <h1>${esc(p.name)}</h1>

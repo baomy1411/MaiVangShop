@@ -815,3 +815,11 @@ select.st-cancelled { background: #f5d9d6; }
 .card .btns { display: flex; flex-direction: column; gap: 0.45rem; margin-top: auto; }
 .card .btns .btn { margin-top: 0; width: 100%; }
 .detail .btns { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
+
+/* ===== Trang chi tiết: ảnh hiện đủ, không bị viền; hàng nút đều nhau ===== */
+.detail .pic.has-img { aspect-ratio: auto; max-height: none; display: block; background: none; font-size: inherit; border-radius: 15px; }
+.detail .pic.has-img img { width: 100%; height: auto; max-height: none; object-fit: cover; display: block; border-radius: 15px; }
+.detail .pic.has-img.no-image { aspect-ratio: 1; display: grid; background: var(--gold-pale); }
+.btns .btn { margin: 0; }
+.detail .btns { align-items: center; }
+.detail .btns .btn { flex: 0 0 auto; min-height: 46px; }
