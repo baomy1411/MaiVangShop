@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -261,6 +262,7 @@ app.patch('/api/admin/orders/:id', auth, adminOnly, ah(async (req, res) => {
   if (!STATUSES.includes(status)) return fail(res, 400, 'Trạng thái không hợp lệ');
   const o = id && await db.one('SELECT * FROM orders WHERE id=$1', [id]);
   if (!o) return fail(res, 404, 'Không tìm thấy đơn hàng');
+  if (o.status === 'cancelled') return fail(res, 400, 'Đơn đã hủy, hãy tạo đơn mới thay vì khôi phục');
   await db.tx(async t => {
     if (status === 'cancelled' && o.status !== 'cancelled')
       for (const it of await t.q('SELECT product_id,qty FROM order_items WHERE order_id=$1', [id]))

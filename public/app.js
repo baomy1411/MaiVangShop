@@ -370,7 +370,7 @@ async function route() {
   const h = location.hash || '#/', [, page, arg] = h.split('/');
   const needLogin = ['checkout', 'orders', 'account', 'admin'];
   if (needLogin.includes(page) && !state.user) { sessionStorage.setItem('next', h); return go('#/login'); }
-  if (h === '#shop') return; // neo trang
+  if (h === '#shop') { if (!$('#shop')) viewShop(); $('#shop')?.scrollIntoView(); return; }
   try {
     if (!page) viewShop();
     else if (page === 'product') viewProduct(arg);
