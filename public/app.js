@@ -2,14 +2,20 @@
 const SHOP = {
   phone: '0938333540', phoneText: '0938 333 540',
   address: '98/120 Bùi Văn Ba, Quận 7, TP. Hồ Chí Minh',
-  // Điền thông tin ngân hàng thật để hiện mã QR chuyển khoản (bankId theo VietQR, ví dụ: VCB, MB, ACB, TCB)
-  bank: { bankId: '', accountNo: '', accountName: '' },
+  // Chuyển khoản: thay file public/img/qr-chuyen-khoan.png bằng ảnh mã QR của bạn (giữ nguyên tên file).
+  // bankName / accountNo / accountName: điền nếu muốn hiện chữ bên dưới mã QR (có thể để trống).
+  // useVietQR: đổi thành true và điền bankId (VCB, MB, ACB, TCB...) + accountNo để tự tạo QR có sẵn số tiền.
+  bank: { qrImage: '/img/qr-chuyen-khoan.png', bankName: '', accountNo: '', accountName: '', useVietQR: false, bankId: '' },
 };
 function bankBlock(orderId, total) {
   const b = SHOP.bank;
-  if (!b.bankId || !b.accountNo) return `<p>Vui lòng liên hệ <a href="tel:${SHOP.phone}">${SHOP.phoneText}</a> để nhận thông tin chuyển khoản. Nội dung: <b>MAI ${orderId}</b></p>`;
-  const qr = `https://img.vietqr.io/image/${encodeURIComponent(b.bankId)}-${encodeURIComponent(b.accountNo)}-compact2.png?amount=${total}&addInfo=${encodeURIComponent('MAI ' + orderId)}&accountName=${encodeURIComponent(b.accountName)}`;
-  return `<p>Quét mã để chuyển khoản:</p><img src="${qr}" alt="Mã QR chuyển khoản" style="max-width:260px;width:100%"><p>${esc(b.accountName)} · ${esc(b.bankId)} · ${esc(b.accountNo)}<br>Nội dung: <b>MAI ${orderId}</b></p>`;
+  const vietqr = b.useVietQR && b.bankId && b.accountNo;
+  const img = vietqr
+    ? `https://img.vietqr.io/image/${encodeURIComponent(b.bankId)}-${encodeURIComponent(b.accountNo)}-compact2.png?amount=${total}&addInfo=${encodeURIComponent('MAI ' + orderId)}&accountName=${encodeURIComponent(b.accountName)}`
+    : b.qrImage;
+  const lines = [b.bankName, b.accountNo && 'STK: ' + b.accountNo, b.accountName].filter(Boolean).map(esc).join(' · ');
+  return `<p>Quét mã để chuyển khoản:</p><img src="${esc(img)}" alt="Mã QR chuyển khoản" style="max-width:260px;width:100%">
+    <p>${lines ? lines + '<br>' : ''}Số tiền: <b>${vnd(total)}</b><br>Nội dung: <b>MAI ${orderId}</b></p>`;
 }
 
 const payLabel = o => (o.payment === 'cod' ? 'COD' : o.payment === 'vnpay' ? 'VNPay' : 'Chuyển khoản') + (o.paid ? ' · Đã thanh toán' : '');
@@ -136,7 +142,10 @@ function viewShop() {
           <span class="cat">${esc(p.category)}</span>
           <h3><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
           <span class="price">${vnd(p.price)}</span>
-          <button class="btn" data-add="${p.id}" ${p.stock < 1 ? 'disabled' : ''}>${p.stock < 1 ? 'Hết hàng' : 'Thêm vào giỏ'}</button>
+          <div class="btns">
+            <button class="btn gold" data-buy="${p.id}" ${p.stock < 1 ? 'disabled' : ''}>${p.stock < 1 ? 'Hết hàng' : 'Mua ngay'}</button>
+            ${p.stock < 1 ? '' : `<button class="btn ghost" data-add="${p.id}">Thêm vào giỏ</button>`}
+          </div>
         </div>
       </article>`).join('') : '<p class="empty">Không tìm thấy sản phẩm phù hợp. Thử từ khóa khác.</p>';
   };
@@ -157,10 +166,29 @@ function viewProduct(id) {
         <p class="price" style="font-size:1.5rem">${vnd(p.price)}</p>
         <p>${esc(p.description).replace(/\n/g, '<br>')}</p>
         <p class="cat">${p.stock > 0 ? `Còn ${p.stock} sản phẩm` : 'Tạm hết hàng'}</p>
-        <button class="btn" data-add="${p.id}" ${p.stock < 1 ? 'disabled' : ''}>Thêm vào giỏ</button>
-        <a class="btn ghost" href="#/">Tiếp tục xem</a>
+        <div class="btns">
+          <button class="btn gold" data-buy="${p.id}" ${p.stock < 1 ? 'disabled' : ''}>Mua ngay</button>
+          <button class="btn" data-add="${p.id}" ${p.stock < 1 ? 'disabled' : ''}>Thêm vào giỏ</button>
+          <a class="btn ghost" href="#/">Tiếp tục xem</a>
+        </div>
       </div>
     </div>`;
+}
+
+// ===== Chính sách (chủ shop chỉnh nội dung cho đúng thực tế) =====
+function viewPolicy() {
+  const cfg = state.cfg || {};
+  const ship = cfg.shipFee != null ? `Phí giao hàng ${vnd(cfg.shipFee)}, miễn phí cho đơn từ ${vnd(cfg.freeShipFrom)}.` : 'Phí giao hàng hiển thị khi thanh toán.';
+  $('#app').innerHTML = `<h2 style="margin-top:2rem">Chính sách cửa hàng</h2>
+    <div class="panel"><h3>Giao hàng và thanh toán</h3>
+      <p>${esc(ship)} Thời gian và lịch giao được cửa hàng xác nhận qua điện thoại sau khi đặt đơn.</p>
+      <p>Hình thức thanh toán: tiền mặt khi nhận hàng (COD), chuyển khoản hoặc VNPay (nếu cửa hàng đã bật).</p></div>
+    <div class="panel"><h3>Kiểm tra hàng và đổi trả</h3>
+      <p>Mai là cây sống nên quý khách vui lòng kiểm tra cây ngay khi nhận. Nếu cây bị dập gãy hoặc không đúng đơn, hãy liên hệ ${esc(SHOP.phoneText)} và gửi ảnh trong vòng 24 giờ để cửa hàng hỗ trợ đổi hoặc xử lý.</p>
+      <p>Cửa hàng không chịu trách nhiệm về cây hư hỏng do chăm sóc sai cách sau khi giao, nhưng luôn sẵn lòng tư vấn cách chăm sóc.</p></div>
+    <div class="panel"><h3>Bảo mật thông tin khách hàng</h3>
+      <p>Cửa hàng chỉ thu thập họ tên, email, số điện thoại và địa chỉ nhận hàng để xử lý đơn và liên hệ với quý khách. Thông tin không được bán hoặc chia sẻ cho bên thứ ba, trừ đơn vị vận chuyển và cổng thanh toán khi cần để hoàn tất đơn hàng.</p>
+      <p>Quý khách có thể liên hệ cửa hàng để yêu cầu xem, sửa hoặc xóa thông tin của mình.</p></div>`;
 }
 
 // ===== Giỏ hàng =====
@@ -280,18 +308,20 @@ async function viewOrders() {
 }
 
 // ===== Quản trị =====
-let adminTab = 'orders', editing = null;
+let adminTab = 'orders', editing = null, adminShowCancelled = false;
 async function viewAdmin() {
   if (state.user?.role !== 'admin') return $('#app').innerHTML = '<p class="empty">Bạn không có quyền truy cập trang này.</p>';
   $('#app').innerHTML = `<h2 style="margin-top:2rem">Quản trị</h2>
     <div class="tabs"><button data-tab="orders" class="${adminTab === 'orders' ? 'on' : ''}">Đơn hàng</button><button data-tab="products" class="${adminTab === 'products' ? 'on' : ''}">Sản phẩm</button><button data-tab="customers" class="${adminTab === 'customers' ? 'on' : ''}">Khách hàng</button><button data-tab="messages" class="${adminTab === 'messages' ? 'on' : ''}">Liên hệ</button></div><div id="adm"></div>`;
   if (adminTab === 'orders') {
-    const orders = await api('/api/admin/orders');
-    $('#adm').innerHTML = `<div class="panel scroll"><table class="tbl"><thead><tr><th>Mã</th><th>Khách</th><th>Sản phẩm</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody>
-      ${orders.map(o => `<tr><td>#${o.id}<br><span class="cat">${vnTime(o.created_at)}</span></td>
+    const orders = await api('/api/admin/orders' + (adminShowCancelled ? '?cancelled=1' : ''));
+    $('#adm').innerHTML = `<div class="legend">${Object.entries(STATUS).filter(([k]) => adminShowCancelled || k !== 'cancelled').map(([k, v]) => `<span class="status ${k}">${v}</span>`).join('')}
+      <button class="btn ghost sm" data-togglecancel>${adminShowCancelled ? 'Ẩn đơn đã hủy' : 'Hiện đơn đã hủy'}</button></div>
+      <div class="panel scroll"><table class="tbl"><thead><tr><th>Mã</th><th>Khách</th><th>Sản phẩm</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody>
+      ${orders.map(o => `<tr class="st-${esc(o.status)}"><td>#${o.id}<br><span class="cat">${vnTime(o.created_at)}</span></td>
         <td>${esc(o.name)}<br>${esc(o.phone)}<br><span class="cat">${esc(o.address)}</span><br><span class="cat">Tài khoản: ${esc(o.user_email)}</span>${o.note ? `<br><i>${esc(o.note)}</i>` : ''}</td>
         <td>${o.items.map(i => `${esc(i.name)} × ${i.qty}`).join('<br>')}</td><td>${vnd(o.total)}<br><span class="cat">${payLabel(o)}</span></td>
-        <td><select data-order="${o.id}">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${v}</option>`).join('')}</select></td></tr>`).join('')}
+        <td><select class="st-${esc(o.status)}" data-order="${o.id}" ${o.status === 'cancelled' ? 'disabled' : ''}>${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${v}</option>`).join('')}</select>${!o.paid && o.status !== 'cancelled' ? `<br><button class="btn ghost sm" data-paid="${o.id}">Đã nhận tiền</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5">Chưa có đơn hàng nào.</td></tr>'}
       </tbody></table></div>`;
   } else if (adminTab === 'customers') {
     const cs = await api('/api/admin/customers');
@@ -299,8 +329,9 @@ async function viewAdmin() {
       ${cs.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.email)}<br><a href="tel:${esc(c.phone)}">${esc(c.phone)}</a></td><td>${vnTime(c.created_at)}</td><td>${c.order_count}</td><td>${vnd(c.spent)}</td><td>${vnTime(c.last_order) || '—'}</td></tr>`).join('') || '<tr><td colspan="6">Chưa có khách đăng ký.</td></tr>'}</tbody></table></div>`;
   } else if (adminTab === 'messages') {
     const ms = await api('/api/admin/messages');
-    $('#adm').innerHTML = `<div class="panel scroll"><table class="tbl"><thead><tr><th>Thời gian</th><th>Khách</th><th>Nội dung</th></tr></thead><tbody>
-      ${ms.map(m => `<tr><td>${vnTime(m.created_at)}</td><td>${esc(m.name)}<br><a href="tel:${esc(m.phone)}">${esc(m.phone)}</a></td><td>${esc(m.content)}</td></tr>`).join('') || '<tr><td colspan="3">Chưa có tin nhắn.</td></tr>'}</tbody></table></div>`;
+    $('#adm').innerHTML = `<p class="cat">Đây là tin nhắn khách để lại ở mục <b>Liên hệ</b> trên website (hỏi giá, nhờ tư vấn...). Bấm vào số điện thoại để gọi lại cho khách, xong việc thì bấm Xóa.</p>
+      <div class="panel scroll"><table class="tbl"><thead><tr><th>Thời gian</th><th>Khách</th><th>Nội dung</th><th></th></tr></thead><tbody>
+      ${ms.map(m => `<tr><td>${vnTime(m.created_at)}</td><td>${esc(m.name)}<br><a href="tel:${esc(m.phone)}">${esc(m.phone)}</a></td><td>${esc(m.content)}</td><td><button class="btn ghost sm" data-delmsg="${m.id}">Xóa</button></td></tr>`).join('') || '<tr><td colspan="4">Chưa có tin nhắn.</td></tr>'}</tbody></table></div>`;
   } else {
     const ps = await api('/api/admin/products'), e = editing || { name: '', category: '', description: '', price: 0, stock: 0, image: '', active: 1 };
     $('#adm').innerHTML = `<form class="panel" id="pf" novalidate><h3>${editing ? 'Sửa sản phẩm #' + e.id : 'Thêm sản phẩm'}</h3>
@@ -314,7 +345,7 @@ async function viewAdmin() {
       ${editing ? '<button type="button" class="btn ghost" data-cancel>Hủy</button>' : ''}</form>
       <div class="panel scroll"><table class="tbl"><thead><tr><th>Tên</th><th>Giá</th><th>Kho</th><th>Trạng thái</th><th></th></tr></thead><tbody>
       ${ps.map(p => `<tr><td>${esc(p.name)}<br><span class="cat">${esc(p.category)}</span></td><td>${vnd(p.price)}</td><td>${p.stock}</td><td>${p.active ? 'Đang bán' : 'Đã ẩn'}</td>
-        <td><button class="btn ghost sm" data-edit="${p.id}">Sửa</button> ${p.active ? `<button class="btn ghost sm" data-hide="${p.id}">Ẩn</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+        <td><button class="btn ghost sm" data-edit="${p.id}">Sửa</button> ${p.active ? `<button class="btn ghost sm" data-hide="${p.id}">Ẩn</button>` : ''} <button class="btn ghost sm danger" data-del="${p.id}">Xóa</button></td></tr>`).join('')}</tbody></table></div>`;
     window._ps = ps;
     $('#pf2').addEventListener('change', async ev => {
       const f = ev.target.files[0]; if (!f) return;
@@ -335,16 +366,18 @@ async function viewAdmin() {
 
 // ===== Sự kiện chung (không dùng onclick trong HTML để tuân thủ CSP) =====
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-add],[data-inc],[data-dec],[data-rm],[data-act],[data-tab],[data-edit],[data-hide],[data-cancel],[data-cancelorder],[data-payorder]');
+  const t = e.target.closest('[data-add],[data-inc],[data-dec],[data-rm],[data-act],[data-tab],[data-edit],[data-hide],[data-cancel],[data-cancelorder],[data-payorder],[data-paid],[data-buy],[data-del],[data-delmsg],[data-togglecancel]');
   if (!t) return;
   const d = t.dataset;
   try {
     if (d.add) {
       const p = state.products.find(x => x.id === Number(d.add));
+      if (!p) return toast('Sản phẩm không còn bán');
       if ((cart[d.add] || 0) >= p.stock) return toast('Đã đạt số lượng tối đa trong kho');
       cart[d.add] = (cart[d.add] || 0) + 1; saveCart(); renderNav(); toast('Đã thêm vào giỏ hàng');
     } else if (d.inc || d.dec || d.rm) {
       const id = d.inc || d.dec || d.rm, p = state.products.find(x => x.id === Number(id));
+      if (!p) { delete cart[id]; saveCart(); renderNav(); return viewCart(); }
       if (d.inc) { if (cart[id] >= p.stock) return toast('Đã đạt số lượng tối đa trong kho'); cart[id]++; }
       else if (d.dec) { cart[id]--; if (cart[id] < 1) delete cart[id]; } else delete cart[id];
       saveCart(); renderNav(); viewCart();
@@ -354,23 +387,52 @@ document.addEventListener('click', async e => {
     else if (d.edit) { editing = window._ps.find(p => p.id === Number(d.edit)); viewAdmin(); scrollTo(0, 0); }
     else if (d.hide) { if (confirm('Ẩn sản phẩm này khỏi cửa hàng?')) { await api('/api/admin/products/' + d.hide, 'DELETE'); await loadProducts(); viewAdmin(); } }
     else if ('cancel' in d) { editing = null; viewAdmin(); }
+    else if (d.buy) {
+      const p = state.products.find(x => x.id === Number(d.buy));
+      if (!p || p.stock < 1) return toast('Sản phẩm không còn bán');
+      cart[d.buy] = Math.min(Math.max(cart[d.buy] || 0, 1), p.stock); saveCart(); renderNav(); go('#/checkout');
+    }
+    else if (d.del) {
+      if (confirm('XÓA HẲN sản phẩm này? Khách sẽ không thấy nữa và không thể khôi phục.\n(Các đơn hàng cũ vẫn được giữ nguyên.)')) {
+        await api('/api/admin/products/' + d.del + '/remove', 'POST'); editing = null; await loadProducts(); toast('Đã xóa sản phẩm'); viewAdmin();
+      }
+    }
+    else if (d.delmsg) { if (confirm('Xóa tin nhắn này?')) { await api('/api/admin/messages/' + d.delmsg, 'DELETE'); viewAdmin(); } }
+    else if ('togglecancel' in d) { adminShowCancelled = !adminShowCancelled; viewAdmin(); }
+    else if (d.paid) { await api('/api/admin/orders/' + d.paid + '/paid', 'POST'); toast('Đã ghi nhận thanh toán'); viewAdmin(); }
     else if (d.payorder) { location.href = (await api('/api/orders/' + d.payorder + '/vnpay', 'POST')).url; }
     else if (d.cancelorder) { if (confirm('Hủy đơn hàng này?')) { await api('/api/orders/' + d.cancelorder + '/cancel', 'POST'); await loadProducts(); viewOrders(); toast('Đã hủy đơn'); } }
   } catch (er) { toast(er.message); }
 });
 document.addEventListener('change', async e => {
   if (!e.target.dataset.order) return;
-  try { await api('/api/admin/orders/' + e.target.dataset.order, 'PATCH', { status: e.target.value }); toast('Đã cập nhật trạng thái'); await loadProducts(); }
-  catch (er) { toast(er.message); viewAdmin(); }
+  const sel = e.target, status = sel.value;
+  if (status === 'cancelled' && !confirm('Hủy đơn này? Đơn sẽ ẩn khỏi danh sách khi tải lại trang và không thể khôi phục.')) return viewAdmin();
+  try {
+    await api('/api/admin/orders/' + sel.dataset.order, 'PATCH', { status });
+    const tr = sel.closest('tr'); if (tr) tr.className = 'st-' + status; sel.className = 'st-' + status;
+    if (status === 'cancelled') { sel.disabled = true; tr?.querySelector('[data-paid]')?.remove(); toast('Đã hủy đơn, sẽ ẩn khỏi danh sách khi tải lại'); }
+    else toast('Đã cập nhật trạng thái');
+    await loadProducts();
+  } catch (er) { toast(er.message); viewAdmin(); }
 });
 
 // ===== Định tuyến =====
-async function loadProducts() { state.products = await api('/api/products'); }
+async function loadProducts() { state.products = await api('/api/products'); pruneCart(); }
+function pruneCart() {
+  let changed = false;
+  for (const id of Object.keys(cart)) {
+    const p = state.products.find(x => x.id === Number(id));
+    if (!p || p.stock < 1) { delete cart[id]; changed = true; }
+    else if (cart[id] > p.stock) { cart[id] = p.stock; changed = true; }
+  }
+  if (changed) saveCart();
+}
 async function route() {
   const h = location.hash || '#/', [, page, arg] = h.split('/');
   const needLogin = ['checkout', 'orders', 'account', 'admin'];
   if (needLogin.includes(page) && !state.user) { sessionStorage.setItem('next', h); return go('#/login'); }
-  if (h === '#shop') { if (!$('#shop')) viewShop(); $('#shop')?.scrollIntoView(); return; }
+  if (h === '#shop') { if (!$('#shop')) viewShop(); $('#shop')?.scrollIntoView(); return; } // neo trang
   try {
     if (!page) viewShop();
     else if (page === 'product') viewProduct(arg);
@@ -382,6 +444,7 @@ async function route() {
     else if (page === 'orders') await viewOrders();
     else if (page === 'admin') await viewAdmin();
     else if (page === 'contact') viewContact();
+    else if (page === 'policy') viewPolicy();
     else if (page === 'forgot') viewForgot();
     else if (page === 'reset') viewReset(arg);
     else go('#/');

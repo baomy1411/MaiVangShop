@@ -787,3 +787,31 @@ input, select, textarea { max-width: 100%; }
 
 .pic.no-image { background: linear-gradient(135deg, #f8f0d9, #e9efdf); display: grid; place-items: center; }
 .pic.no-image::after { content: "🌼"; font-size: clamp(2.5rem, 8vw, 5rem); }
+
+/* ===== Màu trạng thái đơn hàng ===== */
+.status.pending { background: #fff0c2; color: #7a5800; }
+.status.confirmed { background: #d9e8fb; color: #1c4f8f; }
+.status.shipping { background: #e6dcf7; color: #5b3a9a; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0 0 0.8rem; }
+.legend .btn { margin-left: auto; }
+.tbl tr.st-pending td { background: #fffaea; }
+.tbl tr.st-confirmed td { background: #eef5fd; }
+.tbl tr.st-shipping td { background: #f4effc; }
+.tbl tr.st-done td { background: #eaf6ec; }
+.tbl tr.st-cancelled td { background: #fbe9e7; color: #8a1c12; }
+.tbl tr.st-pending td:first-child { box-shadow: inset 6px 0 0 #ffb600; }
+.tbl tr.st-confirmed td:first-child { box-shadow: inset 6px 0 0 #3b82d6; }
+.tbl tr.st-shipping td:first-child { box-shadow: inset 6px 0 0 #7c4dcc; }
+.tbl tr.st-done td:first-child { box-shadow: inset 6px 0 0 #2f8f46; }
+.tbl tr.st-cancelled td:first-child { box-shadow: inset 6px 0 0 #d33a2c; }
+select.st-pending { background: #fff0c2; }
+select.st-confirmed { background: #d9e8fb; }
+select.st-shipping { background: #e6dcf7; }
+select.st-done { background: #d8efdc; }
+select.st-cancelled { background: #f5d9d6; }
+.btn.danger { color: #8a1c12; border-color: #e3b5b0; }
+
+/* ===== Nút Mua ngay / Thêm vào giỏ ===== */
+.card .btns { display: flex; flex-direction: column; gap: 0.45rem; margin-top: auto; }
+.card .btns .btn { margin-top: 0; width: 100%; }
+.detail .btns { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }

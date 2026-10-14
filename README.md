@@ -18,7 +18,15 @@ Lần chạy đầu, terminal sẽ in email và mật khẩu quản trị. Đăn
 - Thêm địa chỉ vườn/cửa hàng, khu vực giao hàng, phí vận chuyển, lịch giao, chính sách đổi/trả và thông tin liên hệ thực tế.
 - Hosting phải chạy được Node.js (ví dụ Render). Netlify chỉ host file tĩnh nên không chạy được website này. Dữ liệu nằm ở Neon Postgres nên không mất khi deploy lại; đặt `DATABASE_URL` trong biến môi trường của hosting.
 - Bật HTTPS, đặt `NODE_ENV=production`, dùng `JWT_SECRET` riêng và bảo vệ biến môi trường. Sao lưu cơ sở dữ liệu định kỳ.
+- Render gói free có thể chặn gửi email qua SMTP; nên dùng Telegram ở trên, hoặc dịch vụ gửi mail qua API.
+- Trang chính sách (`#/policy`) là nội dung mẫu ở hàm `viewPolicy` trong `public/app.js`; hãy chỉnh cho đúng thực tế cửa hàng.
 - Kiểm tra đặt hàng, tồn kho, tài khoản quản trị và giao diện trên điện thoại trước khi công bố.
+
+## Quản trị: các chức năng chính
+- **Sản phẩm**: "Sửa", "Ẩn" (khách không thấy nhưng còn trong danh sách để bán lại) và "Xóa" (xóa hẳn, đơn hàng cũ vẫn giữ nguyên).
+- **Đơn hàng**: mỗi trạng thái một màu (vàng: chờ xác nhận, xanh dương: đã xác nhận, tím: đang giao, xanh lá: hoàn thành, đỏ: đã hủy). Đơn đã hủy tự ẩn khi tải lại trang; bấm "Hiện đơn đã hủy" nếu cần xem lại.
+- **Liên hệ**: tin nhắn khách gửi từ mục Liên hệ trên website; bấm số điện thoại để gọi lại, xong thì Xóa.
+- **Chuyển khoản**: thay file `public/img/qr-chuyen-khoan.png` bằng ảnh mã QR của bạn (giữ nguyên tên file). Điền thêm ngân hàng/số tài khoản ở `SHOP.bank` trong `public/app.js` nếu muốn hiện chữ dưới mã QR.
 
 ## Ảnh sản phẩm
 Chép ảnh vào `public/img/`, sau đó nhập đường dẫn `/img/ten-anh.jpg` khi thêm hoặc sửa sản phẩm trong trang quản trị.
@@ -26,6 +34,7 @@ Chép ảnh vào `public/img/`, sau đó nhập đường dẫn `/img/ten-anh.jp
 ## Cấu hình nâng cao (biến môi trường)
 - `BASE_URL`: địa chỉ website thật, ví dụ https://tenmien.com (dùng cho email và VNPay).
 - Phí giao hàng: `SHIP_FEE` (mặc định 30000), `FREE_SHIP_FROM` (mặc định 2000000, miễn phí giao từ mức này).
+- Thông báo đơn mới qua Telegram (miễn phí, hợp với Render free): tạo bot bằng @BotFather để lấy `TELEGRAM_BOT_TOKEN`; nhắn tin cho bot rồi mở `https://api.telegram.org/bot<TOKEN>/getUpdates` để lấy `TELEGRAM_CHAT_ID`. Đơn hàng mới và tin nhắn liên hệ sẽ gửi về điện thoại.
 - Email: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `SHOP_EMAIL` (email nhận thông báo đơn mới). Chưa cấu hình thì nội dung email được in ra Terminal.
 - VNPay: `VNPAY_TMN`, `VNPAY_SECRET`, `VNPAY_URL` (mặc định là sandbox thử nghiệm). Đăng ký merchant tại VNPay, khai báo IPN URL là `BASE_URL/api/payment/vnpay-ipn`.
 - Chuyển khoản QR: điền `SHOP.bank` đầu file `public/app.js`.

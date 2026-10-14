@@ -102,20 +102,6 @@ CREATE TABLE IF NOT EXISTS images (
       ['Chậu sứ men xanh cho mai', 'Phụ kiện', 'Chậu sứ đường kính 40cm, có lỗ thoát nước.', 780000, 15],
     ]) await q('INSERT INTO products (name,category,description,price,stock) VALUES ($1,$2,$3,$4,$5)', r);
   }
-
-  // Tự gắn ảnh có sẵn trong public/img cho sản phẩm chưa có ảnh.
-  // Giữ nguyên đường dẫn ảnh đã được quản trị viên thiết lập.
-  const imageDir = path.join(__dirname, 'public', 'img');
-  if (fs.existsSync(imageDir)) {
-    const files = fs.readdirSync(imageDir)
-      .filter(n => /\.(jpe?g|png|webp)$/i.test(n) && n.toLowerCase() !== 'bame.jpg')
-      .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
-    if (files.length) {
-      const missing = await q("SELECT id FROM products WHERE image = '' ORDER BY id");
-      for (const [i, p] of missing.entries())
-        await q("UPDATE products SET image=$1 WHERE id=$2 AND image=''", ['/img/' + encodeURIComponent(files[i % files.length]), p.id]);
-    }
-  }
 }
 
 module.exports = { pool, q, one, tx, init };

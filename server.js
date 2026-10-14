@@ -92,6 +92,26 @@ const authLimiter = rateLimit({
   message: { error: 'Thử quá nhiều lần, vui lòng đợi 15 phút rồi thử lại' },
 });
 
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Bạn gửi quá nhiều lần, vui lòng đợi một lát rồi thử lại' },
+});
+
+// ===== Thông báo cho chủ shop qua Telegram (miễn phí, chạy tốt trên Render free) =====
+// Đặt TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID trong biến môi trường; chưa đặt thì bỏ qua.
+async function notifyShop(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN, chat = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chat) return;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chat, text: text.slice(0, 3500) }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) console.log('Telegram lỗi:', r.status);
+  } catch (e) { console.log('Telegram lỗi:', e.message); }
+}
+
 // ===== Tiện ích =====
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
 const isEmail = e => /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(e) && e.length <= 254;
@@ -220,6 +240,7 @@ app.post('/api/orders', auth, ah(async (req, res) => {
   const info = `Mã đơn #${r.id}\nTổng tiền: ${r.total.toLocaleString('vi-VN')}đ\nNgười nhận: ${name} - ${phone}\nĐịa chỉ: ${address}`;
   sendMail(req.user.email, `Hà Thanh Tâm - Đã nhận đơn hàng #${r.id}`, `Cảm ơn bạn đã đặt hàng.\n${info}\nHotline: 0938 333 540`);
   if (process.env.SHOP_EMAIL) sendMail(process.env.SHOP_EMAIL, `Đơn hàng mới #${r.id}`, info);
+  notifyShop(`🌼 Đơn hàng mới\n${info}\nThanh toán: ${payment}`);
 }));
 
 async function withItems(orders) {
@@ -241,8 +262,10 @@ const STATUSES = ['pending', 'confirmed', 'shipping', 'done', 'cancelled'];
 
 // Đơn hàng kèm email tài khoản của người đặt
 app.get('/api/admin/orders', auth, adminOnly, ah(async (req, res) => {
+  const withCancelled = req.query.cancelled === '1'; // mặc định không hiện đơn đã hủy
   res.json(await withItems(await db.q(
-    'SELECT o.*, u.email AS user_email FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.id DESC LIMIT 500')));
+    "SELECT o.*, u.email AS user_email FROM orders o JOIN users u ON u.id=o.user_id WHERE ($1::boolean OR o.status <> 'cancelled') ORDER BY o.id DESC LIMIT 500",
+    [withCancelled])));
 }));
 
 // Danh sách khách hàng đã đăng ký: số đơn, tổng tiền đã mua, lần đặt gần nhất
@@ -272,6 +295,15 @@ app.patch('/api/admin/orders/:id', auth, adminOnly, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.post('/api/admin/orders/:id/paid', auth, adminOnly, ah(async (req, res) => {
+  const id = intId(req.params.id);
+  const o = id && await db.one('SELECT status FROM orders WHERE id=$1', [id]);
+  if (!o) return fail(res, 404, 'Không tìm thấy đơn hàng');
+  if (o.status === 'cancelled') return fail(res, 400, 'Đơn đã hủy');
+  await db.q('UPDATE orders SET paid=1 WHERE id=$1', [id]);
+  res.json({ ok: true });
+}));
+
 function parseProduct(b) {
   const p = {
     name: str(b.name, 120), category: str(b.category, 40), description: str(b.description, 2000),
@@ -296,6 +328,13 @@ app.put('/api/admin/products/:id', auth, adminOnly, ah(async (req, res) => {
   const id = intId(req.params.id);
   const r = id && await db.one('UPDATE products SET name=$1,category=$2,description=$3,price=$4,stock=$5,image=$6,active=$7 WHERE id=$8 RETURNING id', [...PCOLS(p), id]);
   r ? res.json({ ok: true }) : fail(res, 404, 'Không tìm thấy sản phẩm');
+}));
+// Xóa hẳn sản phẩm. Đơn hàng cũ vẫn giữ nguyên vì đã lưu sẵn tên và giá lúc đặt.
+app.post('/api/admin/products/:id/remove', auth, adminOnly, ah(async (req, res) => {
+  const id = intId(req.params.id);
+  if (!id) return fail(res, 404, 'Không tìm thấy sản phẩm');
+  await db.q('DELETE FROM products WHERE id=$1', [id]);
+  res.json({ ok: true });
 }));
 app.delete('/api/admin/products/:id', auth, adminOnly, ah(async (req, res) => {
   // Ẩn sản phẩm thay vì xóa để giữ lịch sử đơn hàng
@@ -366,16 +405,22 @@ app.get('/img/uploads/:name', ah(async (req, res) => {
 }));
 
 // ===== Liên hệ =====
-app.post('/api/contact', authLimiter, ah(async (req, res) => {
+app.post('/api/contact', contactLimiter, ah(async (req, res) => {
   const name = str(req.body.name, 60), phone = str(req.body.phone, 15).replace(/[\s.-]/g, ''), content = str(req.body.content, 1000);
   if (name.length < 2) return fail(res, 400, 'Vui lòng nhập họ tên');
   if (!isPhone(phone)) return fail(res, 400, 'Số điện thoại không hợp lệ');
   if (content.length < 5) return fail(res, 400, 'Vui lòng nhập nội dung liên hệ');
   await db.q('INSERT INTO messages (name,phone,content) VALUES ($1,$2,$3)', [name, phone, content]);
   res.status(201).json({ ok: true });
+  notifyShop(`💬 Tin nhắn liên hệ mới\n${name} - ${phone}\n${content}`);
 }));
 app.get('/api/admin/messages', auth, adminOnly, ah(async (req, res) => {
   res.json(await db.q('SELECT * FROM messages ORDER BY id DESC LIMIT 200'));
+}));
+app.delete('/api/admin/messages/:id', auth, adminOnly, ah(async (req, res) => {
+  const id = intId(req.params.id);
+  if (id) await db.q('DELETE FROM messages WHERE id=$1', [id]);
+  res.json({ ok: true });
 }));
 
 // ===== Quên mật khẩu (gửi email nếu đã cấu hình SMTP, không thì in ra log) =====
@@ -419,7 +464,11 @@ app.post('/api/orders/:id/cancel', auth, ah(async (req, res) => {
 }));
 
 app.use('/api', (req, res) => fail(res, 404, 'Không tìm thấy'));
-app.use(express.static(path.join(__dirname, 'public'), { index: 'index.html' }));
+app.get(['/', '/index.html'], (req, res) => {
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace(/%BASE%/g, BASE().replace(/\/$/, ''));
+  res.type('html').send(html);
+});
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use((err, req, res, next) => {
   console.error(err);
   fail(res, err.status === 400 ? 400 : 500, err.status === 400 ? 'Dữ liệu gửi lên không hợp lệ' : 'Lỗi máy chủ');
