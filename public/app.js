@@ -308,6 +308,20 @@ async function viewOrders() {
     <p class="cat">Giao tới: ${esc(o.address)}</p>${o.status === 'pending' ? `<button class="btn ghost sm" data-cancelorder="${o.id}">Hủy đơn</button>` : ''}${o.payment === 'vnpay' && !o.paid && o.status === 'pending' ? `<button class="btn sm" data-payorder="${o.id}">Thanh toán VNPay</button>` : ''}</div>`).join('') : '<p class="empty">Bạn chưa có đơn hàng nào.</p>');
 }
 
+// Thu nhỏ ảnh ngay trên trình duyệt trước khi tải lên (ảnh chụp từ điện thoại thường rất nặng)
+async function shrinkImage(file, maxSide = 1400, quality = 0.85) {
+  if (!window.createImageBitmap || !/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', quality));
+    return blob && (blob.size < file.size || file.size > 3 * 1024 * 1024) ? blob : file;
+  } catch { return file; }
+}
+
 // ===== Quản trị =====
 let adminTab = 'orders', editing = null, adminShowCancelled = false;
 async function viewAdmin() {
@@ -349,9 +363,12 @@ async function viewAdmin() {
         <td><button class="btn ghost sm" data-edit="${p.id}">Sửa</button> ${p.active ? `<button class="btn ghost sm" data-hide="${p.id}">Ẩn</button>` : ''} <button class="btn ghost sm danger" data-del="${p.id}">Xóa</button></td></tr>`).join('')}</tbody></table></div>`;
     window._ps = ps;
     $('#pf2').addEventListener('change', async ev => {
-      const f = ev.target.files[0]; if (!f) return;
+      const picked = ev.target.files[0]; if (!picked) return;
       try {
-        const r = await fetch('/api/admin/upload', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': f.type, 'X-Requested-With': 'fetch' }, body: f });
+        toast('Đang xử lý ảnh...');
+        const f = await shrinkImage(picked);
+        if (f.size > 3 * 1024 * 1024) throw new Error('Ảnh quá lớn (tối đa 3MB), hãy chọn ảnh nhỏ hơn');
+        const r = await fetch('/api/admin/upload', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': f.type || 'image/jpeg', 'X-Requested-With': 'fetch' }, body: f });
         const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Tải ảnh thất bại');
         $('#pi').value = d.url; toast('Đã tải ảnh lên, bấm Lưu để áp dụng');
       } catch (er) { toast(er.message); }

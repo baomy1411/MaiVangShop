@@ -473,6 +473,7 @@ app.get(['/', '/index.html'], (req, res) => {
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use((err, req, res, next) => {
   console.error(err);
+  if (err.type === 'entity.too.large' || err.status === 413) return fail(res, 413, 'Tệp quá lớn (ảnh tối đa 3MB), hãy chọn ảnh nhỏ hơn');
   fail(res, err.status === 400 ? 400 : 500, err.status === 400 ? 'Dữ liệu gửi lên không hợp lệ' : 'Lỗi máy chủ');
 });
 
