@@ -254,7 +254,9 @@ async function withItems(orders) {
   return orders.map(o => ({ ...o, items: map.get(o.id) || [] }));
 }
 app.get('/api/orders', auth, ah(async (req, res) => {
-  res.json(await withItems(await db.q('SELECT * FROM orders WHERE user_id=$1 ORDER BY id DESC', [req.user.id])));
+  const withCancelled = req.query.cancelled === '1'; // mặc định không hiện đơn đã hủy
+  res.json(await withItems(await db.q(
+    "SELECT * FROM orders WHERE user_id=$1 AND ($2::boolean OR status <> 'cancelled') ORDER BY id DESC", [req.user.id, withCancelled])));
 }));
 
 // ===== Quản trị =====

@@ -297,10 +297,11 @@ function viewCheckout() {
   });
 }
 
+let showMyCancelled = false;
 async function viewOrders() {
   $('#app').innerHTML = '<p class="empty">Đang tải...</p>';
-  const orders = await api('/api/orders');
-  $('#app').innerHTML = `<h2 style="margin-top:2rem">Đơn hàng của tôi</h2>` + (orders.length ? orders.map(o => `
+  const orders = await api('/api/orders' + (showMyCancelled ? '?cancelled=1' : ''));
+  $('#app').innerHTML = `<h2 style="margin-top:2rem">Đơn hàng của tôi</h2><p><button class="btn ghost sm" data-togglemine>${showMyCancelled ? 'Ẩn đơn đã hủy' : 'Hiện đơn đã hủy'}</button></p>` + (orders.length ? orders.map(o => `
     <div class="panel"><p><b>Đơn #${o.id}</b> · ${vnTime(o.created_at)} · <span class="status ${esc(o.status)}">${STATUS[o.status] || esc(o.status)}</span></p>
     ${o.items.map(i => `<p>${esc(i.name)} × ${i.qty} – ${vnd(i.price * i.qty)}</p>`).join('')}
     <p>Tổng: <strong class="price">${vnd(o.total)}</strong> · ${payLabel(o)}${o.shipping ? ` · Phí giao ${vnd(o.shipping)}` : ''}</p>
@@ -366,7 +367,7 @@ async function viewAdmin() {
 
 // ===== Sự kiện chung (không dùng onclick trong HTML để tuân thủ CSP) =====
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-add],[data-inc],[data-dec],[data-rm],[data-act],[data-tab],[data-edit],[data-hide],[data-cancel],[data-cancelorder],[data-payorder],[data-paid],[data-buy],[data-del],[data-delmsg],[data-togglecancel]');
+  const t = e.target.closest('[data-add],[data-inc],[data-dec],[data-rm],[data-act],[data-tab],[data-edit],[data-hide],[data-cancel],[data-cancelorder],[data-payorder],[data-paid],[data-buy],[data-del],[data-delmsg],[data-togglecancel],[data-togglemine]');
   if (!t) return;
   const d = t.dataset;
   try {
@@ -398,6 +399,7 @@ document.addEventListener('click', async e => {
       }
     }
     else if (d.delmsg) { if (confirm('Xóa tin nhắn này?')) { await api('/api/admin/messages/' + d.delmsg, 'DELETE'); viewAdmin(); } }
+    else if ('togglemine' in d) { showMyCancelled = !showMyCancelled; viewOrders(); }
     else if ('togglecancel' in d) { adminShowCancelled = !adminShowCancelled; viewAdmin(); }
     else if (d.paid) { await api('/api/admin/orders/' + d.paid + '/paid', 'POST'); toast('Đã ghi nhận thanh toán'); viewAdmin(); }
     else if (d.payorder) { location.href = (await api('/api/orders/' + d.payorder + '/vnpay', 'POST')).url; }
